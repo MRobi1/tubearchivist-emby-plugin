@@ -202,8 +202,11 @@ jobs:
           done
         fi
         
-        echo "Final lib directory contents:"
-        ls -la lib/
+        
+    - name: Build plugin
+      run: |
+        echo "Building plugin..."
+        dotnet build Emby.Plugin.TubeArchivistMetadata.csproj --configuration Release --no-restore --verbosity normal
         
     - name: Restore dependencies
       run: |
