@@ -202,13 +202,13 @@ jobs:
           done
         fi
         
-        # Clean up any cached build artifacts that might reference old paths
-        rm -rf bin/ obj/ || true
-        
         echo "Final lib directory contents:"
         ls -la lib/
-    
-    - name: Build plugin
+        
+    - name: Restore dependencies
+      run: |
+        echo "Restoring NuGet packages..."
+        dotnet restore Emby.Plugin.TubeArchivistMetadata.csproj -v normal
       run: |
         echo "Building plugin..."
         dotnet build Emby.Plugin.TubeArchivistMetadata.csproj --configuration Release --no-restore --verbosity normal
