@@ -2,12 +2,12 @@ name: Build and Release
 
 on:
   push:
-    branches: [ main, master ]  # Triggers on pushes to main/master
+    branches: [ main, master ]
     tags:
-      - 'v*.*.*'  # Triggers on version tags like v1.0.0
+      - 'v*.*.*'
   pull_request:
-    branches: [ main, master ]  # Triggers on PRs to main/master
-  workflow_dispatch:  # Allows manual triggering
+    branches: [ main, master ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -38,11 +38,11 @@ jobs:
     - name: Download Emby Server for assemblies
       if: steps.cache-emby.outputs.cache-hit != 'true'
       run: |
-        set -e  # Exit on any error
+        set -e
         
         echo "Downloading Emby Server..."
         
-        # Try multiple Emby versions in order of preference
+        # Try multiple Emby versions
         EMBY_VERSIONS=("4.8.10.0" "4.8.9.0" "4.8.8.0" "4.8.0.56")
         DOWNLOAD_SUCCESS=false
         
@@ -75,8 +75,8 @@ jobs:
           exit 1
         fi
         
-        size=$(stat -c%s "emby-server.deb" 2>/dev/null || stat -f%z "emby-server.deb" 2>/dev/null || echo "unknown")
-        echo "Downloaded file size: $size"
+        FILE_SIZE=$(stat -c%s "emby-server.deb" 2>/dev/null || stat -f%z "emby-server.deb" 2>/dev/null || echo "unknown")
+        echo "Downloaded file size: $FILE_SIZE"
         
         echo "Extracting Emby package..."
         dpkg-deb -x emby-server.deb ./emby-extract
@@ -126,8 +126,8 @@ jobs:
         # Verify we have real DLL files (not empty)
         for assembly in "${ASSEMBLIES[@]}"; do
           if [ -f "./lib/$assembly" ] && [ -s "./lib/$assembly" ]; then
-            size=$(stat -c%s "./lib/$assembly" 2>/dev/null || stat -f%z "./lib/$assembly" 2>/dev/null || echo "unknown")
-            echo "$assembly: OK ($size bytes)"
+            ASSEMBLY_SIZE=$(stat -c%s "./lib/$assembly" 2>/dev/null || stat -f%z "./lib/$assembly" 2>/dev/null || echo "unknown")
+            echo "$assembly: OK ($ASSEMBLY_SIZE bytes)"
           else
             echo "$assembly: MISSING or EMPTY"
           fi
@@ -152,10 +152,7 @@ jobs:
           echo "Creating stub assemblies..."
           for assembly in "${MISSING_ASSEMBLIES[@]}"; do
             echo "Creating minimal stub for $assembly"
-            # Create a minimal valid .NET assembly stub
-            cat > "./lib/$assembly" << 'EOF'
-// Stub assembly for build compatibility
-EOF
+            echo "// Stub assembly for build compatibility" > "./lib/$assembly"
           done
         else
           echo "All required assemblies found and non-empty"
@@ -169,10 +166,7 @@ EOF
     - name: Build plugin
       run: |
         echo "Building plugin..."
-        dotnet build Emby.Plugin.TubeArchivistMetadata.csproj \
-          --configuration Release \
-          --no-restore \
-          --verbosity normal
+        dotnet build Emby.Plugin.TubeArchivistMetadata.csproj --configuration Release --no-restore --verbosity normal
       
     - name: Create release package
       run: |
