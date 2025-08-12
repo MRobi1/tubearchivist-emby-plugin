@@ -19,19 +19,32 @@ jobs:
       with:
         dotnet-version: '6.0.x'
         
+    - name: Add NuGet source for Emby
+      run: |
+        dotnet nuget add source "https://nuget.emby.media/v3/index.json" -n "Emby"
+        
     - name: Restore dependencies
       run: dotnet restore Emby.Plugin.TubeArchivistMetadata.csproj
       
     - name: Build plugin
-      run: dotnet publish Emby.Plugin.TubeArchivistMetadata.csproj --configuration Release --output ./build
+      run: dotnet build EEmby.Plugin.TubeArchivistMetadata.csproj --configuration Release --no-restore
+      
+    - name: Publish plugin
+      run: dotnet publish Emby.Plugin.TubeArchivistMetadata.csproj --configuration Release --output ./build --no-restore
       
     - name: Create release package
       run: |
         mkdir -p release
-        cp ./build/Emby.Plugin.TubeArchivistMetadata.dll release/
+        cp ./build/Emby.Plugin.TubeArchivistMetadata.dll release/ || cp ./Emby.Plugin.TubeArchivistMetadata/bin/Release/net6.0/Emby.Plugin.TubeArchivistMetadata.dll release/
         cp Emby.Plugin.TubeArchivistMetadata/meta.json release/
         cd release
         zip -r ../TubeArchivistMetadata-${{ github.ref_name }}.zip .
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: plugin-files
+        path: release/
         
     - name: Create Release
       uses: softprops/action-gh-release@v1
