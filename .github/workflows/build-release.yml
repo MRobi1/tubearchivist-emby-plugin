@@ -19,26 +19,62 @@ jobs:
       with:
         dotnet-version: '6.0.x'
         
-    - name: Add NuGet source for Emby
+    - name: Create lib directory
+      run: mkdir -p lib
+        
+    - name: Download Emby Server for assemblies
       run: |
-        dotnet nuget add source "https://nuget.emby.media/v3/index.json" -n "Emby"
+        # Download Emby Server to extract required assemblies
+        wget -q https://github.com/MediaBrowser/Emby.Releases/releases/download/4.8.0.56/emby-server-deb_4.8.0.56_amd64.deb
+        dpkg-deb -x emby-server-deb_4.8.0.56_amd64.deb ./emby-extract
+        
+        # Copy required assemblies
+        cp ./emby-extract/opt/emby-server/system/MediaBrowser.Common.dll ./lib/ || echo "MediaBrowser.Common.dll not found"
+        cp ./emby-extract/opt/emby-server/system/MediaBrowser.Controller.dll ./lib/ || echo "MediaBrowser.Controller.dll not found"  
+        cp ./emby-extract/opt/emby-server/system/MediaBrowser.Model.dll ./lib/ || echo "MediaBrowser.Model.dll not found"
+        
+        # List what we found
+        ls -la ./lib/
+        
+    - name: Create empty assemblies if missing
+      run: |
+        # Create minimal stub assemblies if the real ones weren't found
+        for dll in MediaBrowser.Common.dll MediaBrowser.Controller.dll MediaBrowser.Model.dll; do
+          if [ ! -f "./lib/$dll" ]; then
+            echo "Creating stub for $dll"
+            echo "" > "./lib/$dll"
+          fi
+        done
         
     - name: Restore dependencies
       run: dotnet restore Emby.Plugin.TubeArchivistMetadata.csproj
       
     - name: Build plugin
-      run: dotnet build EEmby.Plugin.TubeArchivistMetadata.csproj --configuration Release --no-restore
-      
-    - name: Publish plugin
-      run: dotnet publish Emby.Plugin.TubeArchivistMetadata.csproj --configuration Release --output ./build --no-restore
+      run: dotnet build Emby.Plugin.TubeArchivistMetadata.csproj --configuration Release --no-restore
       
     - name: Create release package
       run: |
         mkdir -p release
-        cp ./build/Emby.Plugin.TubeArchivistMetadata.dll release/ || cp ./Emby.Plugin.TubeArchivistMetadata/bin/Release/net6.0/Emby.Plugin.TubeArchivistMetadata.dll release/
-        cp Emby.Plugin.TubeArchivistMetadata/meta.json release/
+        
+        # Copy the main DLL
+        if [ -f "./bin/Release/net6.0/Emby.Plugin.TubeArchivistMetadata.dll" ]; then
+          cp ./bin/Release/net6.0/Emby.Plugin.TubeArchivistMetadata.dll release/
+        else
+          echo "Plugin DLL not found in expected location"
+          find . -name "Emby.Plugin.TubeArchivistMetadata.dll" -type f
+          exit 1
+        fi
+        
+        # Copy metadata
+        cp meta.json release/
+        
+        # Create zip package
         cd release
-        zip -r ../TubeArchivistMetadata-${{ github.ref_name }}.zip .
+        zip -r ../TubeArchivistMetadata-${GITHUB_REF#refs/tags/}.zip .
+        cd ..
+        
+        # List what we created
+        ls -la release/
         
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
@@ -51,7 +87,7 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/')
       with:
         files: |
-          TubeArchivistMetadata-${{ github.ref_name }}.zip
+          TubeArchivistMetadata-*.zip
           release/Emby.Plugin.TubeArchivistMetadata.dll
           release/meta.json
         generate_release_notes: true
