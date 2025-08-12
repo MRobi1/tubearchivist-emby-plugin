@@ -175,6 +175,72 @@ jobs:
         echo "Final lib directory contents:"
         ls -la lib/
         
+    - name: Fix Emby API compatibility issues
+      run: |
+        echo "Applying Emby API compatibility fixes..."
+        
+        # Fix 1: Replace MediaBrowser.Common.Json with System.Text.Json
+        find . -name "*.cs" -type f -exec sed -i 's/using MediaBrowser\.Common\.Json;/using System.Text.Json;/g' {} \;
+        
+        # Fix 2: Add missing interface methods and fix return types
+        echo "Patching provider interfaces for Emby compatibility..."
+        
+        # Backup original files
+        cp Providers/TubeArchivistImageProviders.cs Providers/TubeArchivistImageProviders.cs.bak || true
+        cp Providers/TubeArchivistEpisodeProvider.cs Providers/TubeArchivistEpisodeProvider.cs.bak || true  
+        cp Providers/TubeArchivistSeriesProvider.cs Providers/TubeArchivistSeriesProvider.cs.bak || true
+        cp TubeArchivist/TubeArchivistApi.cs TubeArchivist/TubeArchivistApi.cs.bak || true
+        
+        # Create a comprehensive patch for interface compatibility
+        cat > emby_compatibility_patch.py << 'EOF'
+        import re
+        import sys
+        
+        def patch_file(filepath, patches):
+            try:
+                with open(filepath, 'r') as f:
+                    content = f.read()
+                
+                for pattern, replacement in patches:
+                    content = re.sub(pattern, replacement, content, flags=re.MULTILINE | re.DOTALL)
+                
+                with open(filepath, 'w') as f:
+                    f.write(content)
+                print(f"Patched {filepath}")
+            except Exception as e:
+                print(f"Error patching {filepath}: {e}")
+        
+        # Patches for API compatibility
+        api_patches = [
+            (r'using MediaBrowser\.Common\.Json;', 'using System.Text.Json;'),
+            (r'MediaBrowser\.Common\.Json\.JsonSerializer', 'JsonSerializer'),
+        ]
+        
+        # Patches for interface compatibility - add missing methods
+        provider_patches = [
+            # Add missing GetImages method for IRemoteImageProvider
+            (r'(class.*ImageProvider.*IRemoteImageProvider.*?\{)',
+             r'\1\n        public Task<IEnumerable<RemoteImageInfo>> GetImages(BaseItem item, LibraryOptions libraryOptions, CancellationToken cancellationToken)\n        {\n            return GetImages(item, cancellationToken);\n        }'),
+            
+            # Fix GetImageResponse return type
+            (r'public async Task<HttpResponse> GetImageResponse\(string url, CancellationToken cancellationToken\)',
+             r'public async Task<HttpResponseInfo> GetImageResponse(string url, CancellationToken cancellationToken)'),
+            
+            (r'return new HttpResponse\(',
+             r'return new HttpResponseInfo('),
+        ]
+        
+        # Apply patches
+        patch_file('TubeArchivist/TubeArchivistApi.cs', api_patches)
+        patch_file('Providers/TubeArchivistImageProviders.cs', provider_patches)
+        patch_file('Providers/TubeArchivistEpisodeProvider.cs', provider_patches)
+        patch_file('Providers/TubeArchivistSeriesProvider.cs', provider_patches)
+        EOF
+        
+        python3 emby_compatibility_patch.py
+        
+        echo "Applied compatibility patches. Attempting build..."
+        
     - name: Restore dependencies
       run: |
         echo "Restoring NuGet packages..."
