@@ -20,10 +20,10 @@ jobs:
         dotnet-version: '6.0.x'
         
     - name: Restore dependencies
-      run: dotnet restore Emby.Plugin.TubeArchivistMetadata/Emby.Plugin.TubeArchivistMetadata.csproj
+      run: dotnet restore Emby.Plugin.TubeArchivistMetadata.csproj
       
     - name: Build plugin
-      run: dotnet publish Emby.Plugin.TubeArchivistMetadata/Emby.Plugin.TubeArchivistMetadata.csproj --configuration Release --output ./build
+      run: dotnet publish Emby.Plugin.TubeArchivistMetadata.csproj --configuration Release --output ./build
       
     - name: Create release package
       run: |
