@@ -2,8 +2,11 @@ name: Build and Release
 
 on:
   push:
+    branches: [ main, master ]  # Triggers on pushes to main/master
     tags:
       - 'v*.*.*'  # Triggers on version tags like v1.0.0
+  pull_request:
+    branches: [ main, master ]  # Triggers on PRs to main/master
   workflow_dispatch:  # Allows manual triggering
 
 jobs:
