@@ -163,6 +163,51 @@ jobs:
         echo "Restoring NuGet packages..."
         dotnet restore Emby.Plugin.TubeArchivistMetadata.csproj -v normal
       
+    - name: Verify and fix assembly references
+      run: |
+        echo "Verifying lib directory and assemblies..."
+        ls -la lib/ || echo "lib directory not found"
+        
+        # Ensure we have all required assemblies in lib
+        REQUIRED_ASSEMBLIES=("MediaBrowser.Common.dll" "MediaBrowser.Controller.dll" "MediaBrowser.Model.dll")
+        MISSING_COUNT=0
+        
+        for assembly in "${REQUIRED_ASSEMBLIES[@]}"; do
+          if [ ! -f "lib/$assembly" ]; then
+            echo "ERROR: lib/$assembly is missing"
+            MISSING_COUNT=$((MISSING_COUNT + 1))
+          elif [ ! -s "lib/$assembly" ]; then
+            echo "ERROR: lib/$assembly is empty"
+            MISSING_COUNT=$((MISSING_COUNT + 1))
+          else
+            echo "OK: lib/$assembly exists and is non-empty"
+          fi
+        done
+        
+        if [ $MISSING_COUNT -gt 0 ]; then
+          echo "Found $MISSING_COUNT missing or empty assemblies"
+          echo "Attempting to find and copy assemblies from extraction..."
+          
+          for assembly in "${REQUIRED_ASSEMBLIES[@]}"; do
+            if [ ! -f "lib/$assembly" ] || [ ! -s "lib/$assembly" ]; then
+              echo "Searching for $assembly..."
+              found_path=$(find ./emby-extract -name "$assembly" -type f | head -1)
+              if [ -n "$found_path" ]; then
+                echo "Found $assembly at: $found_path"
+                cp "$found_path" "lib/$assembly"
+              else
+                echo "WARNING: $assembly not found in extraction"
+              fi
+            fi
+          done
+        fi
+        
+        # Clean up any cached build artifacts that might reference old paths
+        rm -rf bin/ obj/ || true
+        
+        echo "Final lib directory contents:"
+        ls -la lib/
+    
     - name: Build plugin
       run: |
         echo "Building plugin..."
