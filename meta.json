@@ -10,6 +10,6 @@
   "framework": "net6.0",
   "timestamp": "2023-12-01T00:00:00.0000000Z",
   "changelog": "Initial Emby version based on Jellyfin plugin",
-  "sourceUrl": "https://github.com/tubearchivist/tubearchivist-emby-plugin",
+  "sourceUrl": "https://github.com/MRobi1/tubearchivist-emby-plugin.git",
   "filename": "Emby.Plugin.TubeArchivistMetadata.dll"
 }
