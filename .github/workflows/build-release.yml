@@ -75,7 +75,8 @@ jobs:
           exit 1
         fi
         
-        echo "Downloaded file size: $(stat -f%z emby-server.deb 2>/dev/null || stat -c%s emby-server.deb)"
+        size=$(stat -c%s "emby-server.deb" 2>/dev/null || stat -f%z "emby-server.deb" 2>/dev/null || echo "unknown")
+        echo "Downloaded file size: $size"
         
         echo "Extracting Emby package..."
         dpkg-deb -x emby-server.deb ./emby-extract
@@ -125,7 +126,8 @@ jobs:
         # Verify we have real DLL files (not empty)
         for assembly in "${ASSEMBLIES[@]}"; do
           if [ -f "./lib/$assembly" ] && [ -s "./lib/$assembly" ]; then
-            echo "$assembly: OK ($(stat -f%z "./lib/$assembly" 2>/dev/null || stat -c%s "./lib/$assembly") bytes)"
+            size=$(stat -c%s "./lib/$assembly" 2>/dev/null || stat -f%z "./lib/$assembly" 2>/dev/null || echo "unknown")
+            echo "$assembly: OK ($size bytes)"
           else
             echo "$assembly: MISSING or EMPTY"
           fi
