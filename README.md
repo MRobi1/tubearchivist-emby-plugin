@@ -49,7 +49,7 @@ Prerequisites:
 Build steps:
 ```bash
 # Clone the repository
-git clone https://github.com/tubearchivist/tubearchivist-emby-plugin.git
+git clone https://github.com/MRobi1/tubearchivist-emby-plugin.git
 cd tubearchivist-emby-plugin
 
 # Set the Emby Server path (adjust as needed)
