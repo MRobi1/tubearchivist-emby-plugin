@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TubeArchivist Metadata Configuration</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+<body>
+    <div data-role="page" class="page type-interior pluginConfigurationPage tubeArchivistMetadataConfigurationPage" data-require="emby-input,emby-button,emby-select,emby-checkbox">
+        <div data-role="content">
+            <div class="content-primary">
+                <form class="tubeArchivistMetadataConfigurationForm">
+                    <div class="sectionTitleContainer flex align-items-center">
+                        <h2 class="sectionTitle">TubeArchivist Metadata Configuration</h2>
+                    </div>
+
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="TubeArchivistUrl">TubeArchivist URL:</label>
+                        <input is="emby-input" type="url" id="TubeArchivistUrl" name="TubeArchivistUrl" required />
+                        <div class="fieldDescription">The URL of your TubeArchivist instance (e.g., http://localhost:8000)</div>
+                    </div>
+
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="TubeArchivistApiKey">TubeArchivist API Key:</label>
+                        <input is="emby-input" type="password" id="TubeArchivistApiKey" name="TubeArchivistApiKey" required />
+                        <div class="fieldDescription">Your TubeArchivist API key found in the settings</div>
+                    </div>
+
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="CollectionTitle">Collection Display Name:</label>
+                        <input is="emby-input" type="text" id="CollectionTitle" name="CollectionTitle" />
+                        <div class="fieldDescription">Display name for the TubeArchivist collection (default: TubeArchivist)</div>
+                    </div>
+
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="ChannelOverviewLength">Channel Overview Length:</label>
+                        <input is="emby-input" type="number" id="ChannelOverviewLength" name="ChannelOverviewLength" min="50" max="2000" />
+                        <div class="fieldDescription">Maximum length for channel descriptions (50-2000 characters)</div>
+                    </div>
+
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="VideoOverviewLength">Video Overview Length:</label>
+                        <input is="emby-input" type="number" id="VideoOverviewLength" name="VideoOverviewLength" min="50" max="2000" />
+                        <div class="fieldDescription">Maximum length for video descriptions (50-2000 characters)</div>
+                    </div>
+
+                    <h3>Playback Synchronization Settings</h3>
+                    
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label>
+                            <input is="emby-checkbox" type="checkbox" id="JellyfinToTubeArchivistPlayback" name="JellyfinToTubeArchivistPlayback" />
+                            <span>Sync playback from Emby to TubeArchivist</span>
+                        </label>
+                        <div class="fieldDescription">Enable to sync watch progress and watched status from Emby to TubeArchivist</div>
+                    </div>
+
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="PlaybackUsers">Emby to TubeArchivist Users:</label>
+                        <input is="emby-input" type="text" id="PlaybackUsers" name="PlaybackUsers" />
+                        <div class="fieldDescription">Emby username to sync playback data to TubeArchivist (leave empty to disable)</div>
+                    </div>
+
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label>
+                            <input is="emby-checkbox" type="checkbox" id="TubeArchivistToJellyfinPlayback" name="TubeArchivistToJellyfinPlayback" />
+                            <span>Sync playback from TubeArchivist to Emby</span>
+                        </label>
+                        <div class="fieldDescription">Enable to sync watch progress and watched status from TubeArchivist to Emby</div>
+                    </div>
+
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="FromTubeArchivistUsers">TubeArchivist to Emby Users:</label>
+                        <input is="emby-input" type="text" id="FromTubeArchivistUsers" name="FromTubeArchivistUsers" />
+                        <div class="fieldDescription">Comma-separated list of Emby usernames to sync data for</div>
+                    </div>
+
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="SyncIntervalSeconds">Sync Interval (seconds):</label>
+                        <input is="emby-input" type="number" id="SyncIntervalSeconds" name="SyncIntervalSeconds" min="30" max="3600" />
+                        <div class="fieldDescription">How often to sync data from TubeArchivist to Emby (30-3600 seconds)</div>
+                    </div>
+
+                    <br />
+                    <div>
+                        <button is="emby-button" type="submit" class="raised button-submit block">
+                            <span>Save</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script type="text/javascript">
+            $('.tubeArchivistMetadataConfigurationPage').on('pageshow', function () {
+                Dashboard.showLoadingMsg();
+                ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                    $('#TubeArchivistUrl').val(config.TubeArchivistUrl);
+                    $('#TubeArchivistApiKey').val(config.TubeArchivistApiKey);
+                    $('#CollectionTitle').val(config.CollectionTitle);
+                    $('#ChannelOverviewLength').val(config.ChannelOverviewLength);
+                    $('#VideoOverviewLength').val(config.VideoOverviewLength);
+                    $('#JellyfinToTubeArchivistPlayback').checked(config.JellyfinToTubeArchivistPlayback);
+                    $('#TubeArchivistToJellyfinPlayback').checked(config.TubeArchivistToJellyfinPlayback);
+                    $('#PlaybackUsers').val(config.PlaybackUsers);
+                    $('#FromTubeArchivistUsers').val(config.FromTubeArchivistUsers);
+                    $('#SyncIntervalSeconds').val(config.SyncIntervalSeconds);
+                    Dashboard.hideLoadingMsg();
+                });
+            });
+
+            $('.tubeArchivistMetadataConfigurationForm').on('submit', function (e) {
+                Dashboard.showLoadingMsg();
+                e.preventDefault();
+                
+                ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                    config.TubeArchivistUrl = $('#TubeArchivistUrl').val();
+                    config.TubeArchivistApiKey = $('#TubeArchivistApiKey').val();
+                    config.CollectionTitle = $('#CollectionTitle').val();
+                    config.ChannelOverviewLength = parseInt($('#ChannelOverviewLength').val()) || 500;
+                    config.VideoOverviewLength = parseInt($('#VideoOverviewLength').val()) || 300;
+                    config.JellyfinToTubeArchivistPlayback = $('#JellyfinToTubeArchivistPlayback').checked();
+                    config.TubeArchivistToJellyfinPlayback = $('#TubeArchivistToJellyfinPlayback').checked();
+                    config.PlaybackUsers = $('#PlaybackUsers').val();
+                    config.FromTubeArchivistUsers = $('#FromTubeArchivistUsers').val();
+                    config.SyncIntervalSeconds = parseInt($('#SyncIntervalSeconds').val()) || 60;
+
+                    ApiClient.updatePluginConfiguration(pluginId, config).then(function () {
+                        Dashboard.processPluginConfigurationUpdateResult();
+                    });
+                });
+
+                return false;
+            });
+        </script>
+    </div>
+</body>
+</html>
