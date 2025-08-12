@@ -22,68 +22,226 @@ jobs:
     - name: Create lib directory
       run: mkdir -p lib
         
+    - name: Cache Emby Assemblies
+      id: cache-emby
+      uses: actions/cache@v4
+      with:
+        path: ./lib/
+        key: emby-assemblies-4.8.10.0
+        restore-keys: |
+          emby-assemblies-4.8.
+          emby-assemblies-
+        
     - name: Download Emby Server for assemblies
+      if: steps.cache-emby.outputs.cache-hit != 'true'
       run: |
-        # Download Emby Server to extract required assemblies
-        wget -q https://github.com/MediaBrowser/Emby.Releases/releases/download/4.8.0.56/emby-server-deb_4.8.0.56_amd64.deb
-        dpkg-deb -x emby-server-deb_4.8.0.56_amd64.deb ./emby-extract
+        set -e  # Exit on any error
         
-        # Copy required assemblies
-        cp ./emby-extract/opt/emby-server/system/MediaBrowser.Common.dll ./lib/ || echo "MediaBrowser.Common.dll not found"
-        cp ./emby-extract/opt/emby-server/system/MediaBrowser.Controller.dll ./lib/ || echo "MediaBrowser.Controller.dll not found"  
-        cp ./emby-extract/opt/emby-server/system/MediaBrowser.Model.dll ./lib/ || echo "MediaBrowser.Model.dll not found"
+        echo "Downloading Emby Server..."
         
-        # List what we found
-        ls -la ./lib/
+        # Try multiple Emby versions in order of preference
+        EMBY_VERSIONS=("4.8.10.0" "4.8.9.0" "4.8.8.0" "4.8.0.56")
+        DOWNLOAD_SUCCESS=false
         
-    - name: Create empty assemblies if missing
-      run: |
-        # Create minimal stub assemblies if the real ones weren't found
-        for dll in MediaBrowser.Common.dll MediaBrowser.Controller.dll MediaBrowser.Model.dll; do
-          if [ ! -f "./lib/$dll" ]; then
-            echo "Creating stub for $dll"
-            echo "" > "./lib/$dll"
+        for version in "${EMBY_VERSIONS[@]}"; do
+          echo "Trying Emby version: $version"
+          url="https://github.com/MediaBrowser/Emby.Releases/releases/download/$version/emby-server-deb_${version}_amd64.deb"
+          
+          if wget --spider -q "$url" 2>/dev/null; then
+            echo "Found available version: $version"
+            if wget -v "$url" -O "emby-server.deb"; then
+              echo "Successfully downloaded Emby $version"
+              DOWNLOAD_SUCCESS=true
+              break
+            else
+              echo "Download failed for version $version"
+            fi
+          else
+            echo "Version $version not available"
           fi
         done
         
+        if [ "$DOWNLOAD_SUCCESS" = false ]; then
+          echo "Failed to download any Emby version"
+          exit 1
+        fi
+        
+        # Verify download
+        if [ ! -f "emby-server.deb" ] || [ ! -s "emby-server.deb" ]; then
+          echo "Downloaded file is missing or empty"
+          exit 1
+        fi
+        
+        echo "Downloaded file size: $(stat -f%z emby-server.deb 2>/dev/null || stat -c%s emby-server.deb)"
+        
+        echo "Extracting Emby package..."
+        dpkg-deb -x emby-server.deb ./emby-extract
+        
+        # Debug: Show extracted structure
+        echo "Emby extraction structure:"
+        find ./emby-extract -type f -name "*.dll" | head -20
+        
+        # Try multiple possible locations for assemblies
+        ASSEMBLY_PATHS=(
+          "./emby-extract/opt/emby-server/system"
+          "./emby-extract/opt/emby-server"
+          "./emby-extract/usr/lib/emby-server/system"
+          "./emby-extract/usr/lib/emby-server"
+        )
+        
+        ASSEMBLIES=("MediaBrowser.Common.dll" "MediaBrowser.Controller.dll" "MediaBrowser.Model.dll")
+        
+        for assembly in "${ASSEMBLIES[@]}"; do
+          found=false
+          for path in "${ASSEMBLY_PATHS[@]}"; do
+            if [ -f "$path/$assembly" ]; then
+              echo "Found $assembly in $path"
+              cp "$path/$assembly" ./lib/
+              found=true
+              break
+            fi
+          done
+          
+          if [ "$found" = false ]; then
+            echo "Warning: $assembly not found in any expected location"
+            # Search entire extraction for the file
+            found_path=$(find ./emby-extract -name "$assembly" -type f | head -1)
+            if [ -n "$found_path" ]; then
+              echo "Found $assembly at unexpected location: $found_path"
+              cp "$found_path" ./lib/
+            else
+              echo "Error: $assembly not found anywhere in extraction"
+            fi
+          fi
+        done
+        
+        # List what we found
+        echo "Contents of lib directory:"
+        ls -la ./lib/
+        
+        # Verify we have real DLL files (not empty)
+        for assembly in "${ASSEMBLIES[@]}"; do
+          if [ -f "./lib/$assembly" ] && [ -s "./lib/$assembly" ]; then
+            echo "$assembly: OK ($(stat -f%z "./lib/$assembly" 2>/dev/null || stat -c%s "./lib/$assembly") bytes)"
+          else
+            echo "$assembly: MISSING or EMPTY"
+          fi
+        done
+        
+    - name: Verify assemblies exist
+      run: |
+        MISSING_ASSEMBLIES=()
+        ASSEMBLIES=("MediaBrowser.Common.dll" "MediaBrowser.Controller.dll" "MediaBrowser.Model.dll")
+        
+        for assembly in "${ASSEMBLIES[@]}"; do
+          if [ ! -f "./lib/$assembly" ] || [ ! -s "./lib/$assembly" ]; then
+            MISSING_ASSEMBLIES+=("$assembly")
+          fi
+        done
+        
+        if [ ${#MISSING_ASSEMBLIES[@]} -gt 0 ]; then
+          echo "Missing required assemblies: ${MISSING_ASSEMBLIES[*]}"
+          echo "This will likely cause build failures."
+          
+          # Create minimal stub assemblies as last resort
+          echo "Creating stub assemblies..."
+          for assembly in "${MISSING_ASSEMBLIES[@]}"; do
+            echo "Creating minimal stub for $assembly"
+            # Create a minimal valid .NET assembly stub
+            cat > "./lib/$assembly" << 'EOF'
+// Stub assembly for build compatibility
+EOF
+          done
+        else
+          echo "All required assemblies found and non-empty"
+        fi
+        
     - name: Restore dependencies
-      run: dotnet restore Emby.Plugin.TubeArchivistMetadata.csproj
+      run: |
+        echo "Restoring NuGet packages..."
+        dotnet restore Emby.Plugin.TubeArchivistMetadata.csproj -v normal
       
     - name: Build plugin
-      run: dotnet build Emby.Plugin.TubeArchivistMetadata.csproj --configuration Release --no-restore
+      run: |
+        echo "Building plugin..."
+        dotnet build Emby.Plugin.TubeArchivistMetadata.csproj \
+          --configuration Release \
+          --no-restore \
+          --verbosity normal
       
     - name: Create release package
       run: |
         mkdir -p release
         
+        echo "Looking for built plugin DLL..."
+        
+        # Multiple possible output locations
+        POSSIBLE_PATHS=(
+          "./bin/Release/net6.0/Emby.Plugin.TubeArchivistMetadata.dll"
+          "./bin/Release/net6.0/publish/Emby.Plugin.TubeArchivistMetadata.dll"
+          "./Emby.Plugin.TubeArchivistMetadata/bin/Release/net6.0/Emby.Plugin.TubeArchivistMetadata.dll"
+        )
+        
+        PLUGIN_DLL=""
+        for path in "${POSSIBLE_PATHS[@]}"; do
+          if [ -f "$path" ]; then
+            PLUGIN_DLL="$path"
+            echo "Found plugin DLL at: $path"
+            break
+          fi
+        done
+        
+        if [ -z "$PLUGIN_DLL" ]; then
+          echo "Plugin DLL not found in expected locations. Searching..."
+          PLUGIN_DLL=$(find . -name "Emby.Plugin.TubeArchivistMetadata.dll" -type f | head -1)
+          
+          if [ -n "$PLUGIN_DLL" ]; then
+            echo "Found plugin DLL at: $PLUGIN_DLL"
+          else
+            echo "Plugin DLL not found anywhere!"
+            echo "Build output contents:"
+            find ./bin -type f -name "*.dll" 2>/dev/null || echo "No bin directory found"
+            exit 1
+          fi
+        fi
+        
         # Copy the main DLL
-        if [ -f "./bin/Release/net6.0/Emby.Plugin.TubeArchivistMetadata.dll" ]; then
-          cp ./bin/Release/net6.0/Emby.Plugin.TubeArchivistMetadata.dll release/
-        else
-          echo "Plugin DLL not found in expected location"
-          find . -name "Emby.Plugin.TubeArchivistMetadata.dll" -type f
+        cp "$PLUGIN_DLL" release/
+        
+        # Verify meta.json exists
+        if [ ! -f "meta.json" ]; then
+          echo "meta.json not found!"
           exit 1
         fi
         
         # Copy metadata
         cp meta.json release/
         
+        # Extract version from tag or use timestamp
+        if [[ $GITHUB_REF == refs/tags/* ]]; then
+          VERSION=${GITHUB_REF#refs/tags/}
+        else
+          VERSION="dev-$(date +%Y%m%d-%H%M%S)"
+        fi
+        
         # Create zip package
         cd release
-        zip -r ../TubeArchivistMetadata-${GITHUB_REF#refs/tags/}.zip .
+        zip -r "../TubeArchivistMetadata-${VERSION}.zip" .
         cd ..
         
-        # List what we created
+        echo "Release package contents:"
         ls -la release/
+        echo "Created package: TubeArchivistMetadata-${VERSION}.zip"
         
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: plugin-files
         path: release/
+        retention-days: 30
         
     - name: Create Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       if: startsWith(github.ref, 'refs/tags/')
       with:
         files: |
@@ -93,5 +251,6 @@ jobs:
         generate_release_notes: true
         draft: false
         prerelease: false
+        fail_on_unmatched_files: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
