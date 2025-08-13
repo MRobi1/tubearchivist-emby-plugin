@@ -3,75 +3,58 @@ using MediaBrowser.Model.Plugins;
 namespace Emby.Plugin.TubeArchivistMetadata.Configuration
 {
     /// <summary>
-    /// Plugin configuration.
+    /// Configuration for the TubeArchivist metadata plugin
     /// </summary>
     public class PluginConfiguration : BasePluginConfiguration
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="PluginConfiguration"/> class.
+        /// Gets or sets the TubeArchivist URL
         /// </summary>
-        public PluginConfiguration()
-        {
-            TubeArchivistUrl = string.Empty;
-            TubeArchivistApiKey = string.Empty;
-            CollectionTitle = "TubeArchivist";
-            ChannelOverviewLength = 500;
-            VideoOverviewLength = 300;
-            JellyfinToTubeArchivistPlayback = false;
-            TubeArchivistToJellyfinPlayback = false;
-            PlaybackUsers = string.Empty;
-            FromTubeArchivistUsers = string.Empty;
-            SyncIntervalSeconds = 60;
-        }
+        public string TubeArchivistUrl { get; set; } = "http://localhost:8000";
 
         /// <summary>
-        /// Gets or sets the TubeArchivist instance URL.
+        /// Gets or sets the TubeArchivist API key
         /// </summary>
-        public string TubeArchivistUrl { get; set; }
+        public string ApiKey { get; set; } = string.Empty;
 
         /// <summary>
-        /// Gets or sets the TubeArchivist API key.
+        /// Gets or sets the collection display name
         /// </summary>
-        public string TubeArchivistApiKey { get; set; }
+        public string CollectionDisplayName { get; set; } = "TubeArchivist";
 
         /// <summary>
-        /// Gets or sets the collection title.
+        /// Gets or sets the maximum channel overview length
         /// </summary>
-        public string CollectionTitle { get; set; }
+        public int ChannelOverviewLength { get; set; } = 1000;
 
         /// <summary>
-        /// Gets or sets the channel overview length.
+        /// Gets or sets the maximum video overview length
         /// </summary>
-        public int ChannelOverviewLength { get; set; }
+        public int VideoOverviewLength { get; set; } = 1000;
 
         /// <summary>
-        /// Gets or sets the video overview length.
+        /// Gets or sets a value indicating whether to sync from Emby to TubeArchivist
         /// </summary>
-        public int VideoOverviewLength { get; set; }
+        public bool SyncFromEmby { get; set; } = false;
 
         /// <summary>
-        /// Gets or sets a value indicating whether to sync playback from Emby to TubeArchivist.
+        /// Gets or sets the Emby user to sync to TubeArchivist
         /// </summary>
-        public bool JellyfinToTubeArchivistPlayback { get; set; }
+        public string EmbyToTubeArchivistUsers { get; set; } = string.Empty;
 
         /// <summary>
-        /// Gets or sets a value indicating whether to sync playback from TubeArchivist to Emby.
+        /// Gets or sets a value indicating whether to sync from TubeArchivist to Emby
         /// </summary>
-        public bool TubeArchivistToJellyfinPlayback { get; set; }
+        public bool SyncFromTubeArchivist { get; set; } = false;
 
         /// <summary>
-        /// Gets or sets the users to sync playback data for (Emby to TubeArchivist).
+        /// Gets or sets the TubeArchivist users to sync to Emby (comma-separated)
         /// </summary>
-        public string PlaybackUsers { get; set; }
+        public string TubeArchivistToEmbyUsers { get; set; } = string.Empty;
 
         /// <summary>
-        /// Gets or sets the users to sync playback data for (TubeArchivist to Emby).
+        /// Gets or sets the sync interval in seconds
         /// </summary>
-        public string FromTubeArchivistUsers { get; set; }
-
-        /// <summary>
-        /// Gets or sets the sync interval in seconds.
-        /// </summary>
-        public int SyncIntervalSeconds { get; set; }
+        public int SyncInterval { get; set; } = 300;
     }
 }
