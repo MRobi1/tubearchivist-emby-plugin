@@ -1,15 +1,12 @@
 {
-  "guid": "d4c0ee41-f5c8-4c84-9dc7-8e6c9e2b8a91",
   "name": "TubeArchivist Metadata",
-  "description": "Metadata provider for TubeArchivist, offering improved flexibility and native integration with Emby. Organize your TubeArchivist library as Shows collection where each channel is a show and its videos are episodes, organized in seasons by year.",
-  "overview": "This plugin adds the metadata provider for TubeArchivist, offering improved flexibility and native integration with Emby compared to previous solutions. The media organization is a Shows collection, where each channel is a show and its videos are the episodes, organized in seasons by year. The plugin interacts with TubeArchivist APIs to fetch videos and channels metadata.",
-  "owner": "tubearchivist",
-  "category": "Metadata",
+  "description": "Provides metadata and images from TubeArchivist for TV shows and movies",
   "version": "1.0.0.0",
   "targetAbi": "4.8.0.0",
-  "framework": "net6.0",
-  "timestamp": "2023-12-01T00:00:00.0000000Z",
-  "changelog": "Initial Emby version based on Jellyfin plugin",
-  "sourceUrl": "https://github.com/MRobi1/tubearchivist-emby-plugin.git",
-  "filename": "Emby.Plugin.TubeArchivistMetadata.dll"
+  "framework": "netstandard2.0",
+  "owner": "MRobi1",
+  "category": "Metadata",
+  "imageUrl": "",
+  "changelog": "Initial Emby release",
+  "minimumRequiredUIVersion": "4.8.0.0"
 }
