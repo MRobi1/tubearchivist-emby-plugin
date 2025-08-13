@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Plugins;
@@ -9,7 +8,7 @@ using Emby.Plugin.TubeArchivistMetadata.Configuration;
 namespace Emby.Plugin.TubeArchivistMetadata
 {
     /// <summary>
-    /// The main plugin.
+    /// The main plugin class for TubeArchivist metadata provider
     /// </summary>
     public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     {
@@ -18,27 +17,30 @@ namespace Emby.Plugin.TubeArchivistMetadata
         /// </summary>
         /// <param name="applicationPaths">Instance of the <see cref="IApplicationPaths"/> interface.</param>
         /// <param name="xmlSerializer">Instance of the <see cref="IXmlSerializer"/> interface.</param>
-        public Plugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer)
+        public Plugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer) 
             : base(applicationPaths, xmlSerializer)
         {
             Instance = this;
         }
 
+        /// <summary>
+        /// Gets the current plugin instance.
+        /// </summary>
+        public static Plugin Instance { get; private set; }
+
         /// <inheritdoc />
         public override string Name => "TubeArchivist Metadata";
 
         /// <inheritdoc />
-        public override Guid Id => Guid.Parse("d4c0ee41-f5c8-4c84-9dc7-8e6c9e2b8a91");
+        public override string Description => "Provides metadata and images from TubeArchivist for TV shows and movies";
 
         /// <inheritdoc />
-        public override string Description => "Metadata provider for TubeArchivist";
+        public override Guid Id => Guid.Parse("A8B5B444-8C8D-4F2A-9B1C-3D4E5F6A7B8C");
 
         /// <summary>
-        /// Gets the current plugin instance.
+        /// Gets the plugin web pages.
         /// </summary>
-        public static Plugin? Instance { get; private set; }
-
-        /// <inheritdoc />
+        /// <returns>The plugin web pages.</returns>
         public IEnumerable<PluginPageInfo> GetPages()
         {
             return new[]
@@ -46,7 +48,7 @@ namespace Emby.Plugin.TubeArchivistMetadata
                 new PluginPageInfo
                 {
                     Name = this.Name,
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.html"
+                    EmbeddedResourcePath = string.Format("{0}.Configuration.configPage.html", GetType().Namespace)
                 }
             };
         }
